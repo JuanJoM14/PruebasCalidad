@@ -27,6 +27,8 @@ public class InventoryServiceImpl implements InventoryService {
     }
 
     @Override
+
+    //metodo 1
     public List<InventoryResponse> getInventoryByAlmacen(Long almacenId) {
 
         List<Inventory> inventories = inventoryRepo.findByAlmacenId(almacenId);
@@ -49,6 +51,7 @@ public class InventoryServiceImpl implements InventoryService {
 
 
     @Override
+    //metodo 2
     public InventoryResponse createInventory(InventoryRequest request) {
 
         // Buscar almacén
