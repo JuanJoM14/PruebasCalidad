@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  # Base de datos PostgreSQL
+  postgres:
+    image: postgres:15-alpine
+    container_name: parcial-postgres
+    environment:
+      POSTGRES_DB: inventario_arquisoft
+      POSTGRES_USER: neondb_owner
+      POSTGRES_PASSWORD: npg_J7BG9znvDouy
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - parcial-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d inventario_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Aplicación Spring Boot
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: parcial-app
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://ep-billowing-tree-a4gy85bw-pooler.us-east-1.aws.neon.tech:5432/neondb?sslmode=require
+      SPRING_DATASOURCE_USERNAME: neondb_owner
+      SPRING_DATASOURCE_PASSWORD: npg_J7BG9znvDouy
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_JPA_SHOW_SQL: "true"
+      SPRING_JPA_PROPERTIES_HIBERNATE_FORMAT_SQL: "true"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - parcial-network
+    restart: on-failure
+
+volumes:
+  postgres_data:
+
+networks:
+  parcial-network:
+    driver: bridge
