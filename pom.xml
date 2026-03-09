@@ -32,6 +32,7 @@
 		<java.version>17</java.version>
 		<sonar.projectKey>calidad-software-26-1_calidad-software</sonar.projectKey>
 		<sonar.organization>calidad-software-26-1</sonar.organization>
+		<sonar.host.url>https://sonarcloud.io</sonar.host.url>
 	</properties>
 
 	<dependencies>
