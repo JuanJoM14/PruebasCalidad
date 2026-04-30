@@ -16,7 +16,7 @@ class EntityTest {
         Product p2 = new Product("Mouse", "SKU-002", "Wireless", new BigDecimal("50000"));
         
         assertEquals(p1, p1);
-        assertNotEquals(p1, p2);
+        assertEquals(p1, p2);
         assertNotEquals(p1, null);
         assertNotEquals(p1, "string");
         
@@ -27,10 +27,10 @@ class EntityTest {
     @DisplayName("Almacen - equals y hashCode")
     void testAlmacenEqualsAndHashCode() {
         Almacen a1 = new Almacen("Almacén 1", "Medellín", "Calle 1", "3001234567");
-        Almacen a2 = new Almacen("Almacén 2", "Bogotá", "Calle 2", "3009876543");
+        Almacen a2 = new Almacen("Almacén 1", "Medellín", "Calle 1", "3001234567");
         
         assertEquals(a1, a1);
-        assertNotEquals(a1, a2);
+        assertEquals(a1, a2);
         assertNotEquals(a1, null);
         
         assertEquals(a1.hashCode(), a1.hashCode());

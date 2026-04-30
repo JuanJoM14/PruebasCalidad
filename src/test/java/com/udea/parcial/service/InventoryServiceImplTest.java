@@ -18,10 +18,13 @@ import static org.mockito.ArgumentMatchers.any;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.udea.parcial.dto.InventoryRequest;
 import com.udea.parcial.dto.InventoryResponse;
@@ -44,6 +47,9 @@ class InventoryServiceImplTest {
 
     @Mock
     private AlmacenRepository almacenRepository;
+
+    @Mock
+    private InventoryMapper mapper;
 
     @InjectMocks
     private InventoryServiceImpl inventoryService;
@@ -69,6 +75,22 @@ class InventoryServiceImplTest {
 
         inventory = new Inventory(almacen, product, 50);
         inventory.setLastUpdated(LocalDateTime.now());
+
+        lenient().when(mapper.toResponse(any(Inventory.class))).thenAnswer(invocation -> {
+            Inventory inv = invocation.getArgument(0);
+            InventoryResponse response = new InventoryResponse();
+            response.setAlmacenNombre(inv.getAlmacen() != null ? inv.getAlmacen().getNombre() : null);
+            response.setAlmacenId(inv.getAlmacen() != null ? inv.getAlmacen().getId() : null);
+            response.setProductName(inv.getProduct() != null ? inv.getProduct().getName() : null);
+            response.setProductDescription(inv.getProduct() != null ? inv.getProduct().getDescription() : null);
+            response.setProductId(inv.getProduct() != null ? inv.getProduct().getId() : null);
+            response.setSku(inv.getProduct() != null ? inv.getProduct().getSku() : null);
+            response.setPrice(inv.getProduct() != null ? inv.getProduct().getPrice() : null);
+            response.setStock(inv.getStock());
+            response.setLastUpdated(inv.getLastUpdated());
+            response.setInventoryId(inv.getId());
+            return response;
+        });
     }
 
     @Test
@@ -186,11 +208,12 @@ class InventoryServiceImplTest {
         when(almacenRepository.findById(999L)).thenReturn(Optional.empty());
 
         // Act & Assert
-        RuntimeException exception = assertThrows(RuntimeException.class, () -> {
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class, () -> {
             inventoryService.createInventory(request);
         });
 
-        assertEquals("El almacén no existe", exception.getMessage());
+        assertEquals(HttpStatus.NOT_FOUND, exception.getStatusCode());
+        assertEquals("El almacén no existe", exception.getReason());
         
         verify(almacenRepository, times(1)).findById(999L);
         verify(productRepository, never()).save(any(Product.class));

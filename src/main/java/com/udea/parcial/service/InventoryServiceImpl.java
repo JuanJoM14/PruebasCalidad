@@ -8,7 +8,9 @@ import com.udea.parcial.entity.Product;
 import com.udea.parcial.repository.AlmacenRepository;
 import com.udea.parcial.repository.InventoryRepository;
 import com.udea.parcial.repository.ProductRepository;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -42,7 +44,7 @@ public class InventoryServiceImpl implements InventoryService {
     @Override
     public InventoryResponse createInventory(InventoryRequest request) {
         Almacen almacen = almacenRepo.findById(request.getAlmacenId())
-                .orElseThrow(() -> new RuntimeException("El almacén no existe"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "El almacén no existe"));
 
         Product product = buildProduct(request);
         productRepo.save(product);

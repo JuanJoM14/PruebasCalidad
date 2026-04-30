@@ -1,25 +1,27 @@
 package com.udea.parcial.controller;
 
-//import com.udea.parcial.dto.InventoryRequest;
-//import com.udea.parcial.dto.InventoryResponse;
+import com.udea.parcial.dto.InventoryResponse;
 import com.udea.parcial.entity.Almacen;
 import com.udea.parcial.entity.Inventory;
 import com.udea.parcial.entity.Product;
-import com.udea.parcial.repository.AlmacenRepository;
-import com.udea.parcial.repository.InventoryRepository;
-import com.udea.parcial.repository.ProductRepository;
+import com.udea.parcial.service.InventoryService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -34,18 +36,16 @@ class InventoryControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
-    
-    private InventoryRepository inventoryRepository;
+    @MockBean
+    private InventoryService inventoryService;
 
-    
-    private ProductRepository productRepository;
-
-    
-    private AlmacenRepository almacenRepository;
+    @MockBean
+    private ApiVersionValidator versionValidator;
 
     private Almacen almacen;
     private Product product;
     private Inventory inventory;
+    private InventoryResponse inventoryResponse;
 
     @BeforeEach
     void setUp() {
@@ -53,12 +53,23 @@ class InventoryControllerTest {
         product = new Product("Laptop", "SKU-001", "Laptop gaming", new BigDecimal("3000000"));
         inventory = new Inventory(almacen, product, 50);
         inventory.setLastUpdated(LocalDateTime.now());
+
+        inventoryResponse = new InventoryResponse();
+        inventoryResponse.setAlmacenId(1L);
+        inventoryResponse.setAlmacenNombre("Almacén Central");
+        inventoryResponse.setProductName("Laptop");
+        inventoryResponse.setProductDescription("Laptop gaming");
+        inventoryResponse.setSku("SKU-001");
+        inventoryResponse.setPrice(new BigDecimal("3000000"));
+        inventoryResponse.setStock(50);
+
+        when(versionValidator.validate("v1")).thenReturn(Optional.empty());
     }
 
     @Test
     @DisplayName("GET /inventory - Con versión correcta debe retornar 200")
     void testGetInventory_WithCorrectVersion() throws Exception {
-        when(inventoryRepository.findByAlmacenId(1L)).thenReturn(Arrays.asList(inventory));
+        when(inventoryService.getInventoryByAlmacen(1L)).thenReturn(List.of(inventoryResponse));
 
         mockMvc.perform(get("/inventory")
                 .header("X-API-Version", "v1")
@@ -78,6 +89,9 @@ class InventoryControllerTest {
     @Test
     @DisplayName("GET /inventory - Con versión incorrecta debe retornar 400")
     void testGetInventory_WithWrongVersion() throws Exception {
+        when(versionValidator.validate("v2"))
+            .thenReturn(Optional.of(ResponseEntity.badRequest().body("Unsupported API version")));
+
         mockMvc.perform(get("/inventory")
                 .header("X-API-Version", "v2")
                 .param("almacenId", "1"))
@@ -88,7 +102,7 @@ class InventoryControllerTest {
     @Test
     @DisplayName("GET /inventory - Con almacén vacío debe retornar lista vacía")
     void testGetInventory_EmptyWarehouse() throws Exception {
-        when(inventoryRepository.findByAlmacenId(999L)).thenReturn(Collections.emptyList());
+        when(inventoryService.getInventoryByAlmacen(999L)).thenReturn(Collections.emptyList());
 
         mockMvc.perform(get("/inventory")
                 .header("X-API-Version", "v1")
@@ -100,9 +114,7 @@ class InventoryControllerTest {
     @Test
     @DisplayName("POST /inventory - Crear inventario exitosamente")
     void testCreateInventory_Success() throws Exception {
-        when(almacenRepository.findById(1L)).thenReturn(Optional.of(almacen));
-        when(productRepository.save(any(Product.class))).thenReturn(product);
-        when(inventoryRepository.save(any(Inventory.class))).thenReturn(inventory);
+        when(inventoryService.createInventory(any())).thenReturn(inventoryResponse);
 
         String requestBody = """
             {
@@ -126,7 +138,8 @@ class InventoryControllerTest {
     @Test
     @DisplayName("POST /inventory - Con almacén inexistente debe retornar 404")
     void testCreateInventory_AlmacenNotFound() throws Exception {
-        when(almacenRepository.findById(999L)).thenReturn(Optional.empty());
+        when(inventoryService.createInventory(any()))
+            .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "El almacén no existe"));
 
         String requestBody = """
             {
