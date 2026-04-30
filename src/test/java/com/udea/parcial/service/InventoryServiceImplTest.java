@@ -6,15 +6,16 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import static org.mockito.Mockito.never;
@@ -236,25 +237,22 @@ class InventoryServiceImplTest {
         testAlmacen.setNombre("Almacén Test");
         
         when(almacenRepository.findById(1L)).thenReturn(Optional.of(testAlmacen));
-        
-        // Captura el producto que se pasa al save
-        when(productRepository.save(any(Product.class))).thenAnswer(invocation -> {
-            Product productArgument = invocation.getArgument(0);
-            assertEquals("Monitor Samsung", productArgument.getName());
-            assertEquals("Monitor 27 pulgadas 4K", productArgument.getDescription());
-            assertEquals("SAM-MON-001", productArgument.getSku());
-            assertEquals(new BigDecimal("1200000.00"), productArgument.getPrice());
-            return productArgument;
-        });
-        
-        when(inventoryRepository.save(any(Inventory.class))).thenAnswer(invocation -> 
-            invocation.getArgument(0));
+
+        when(productRepository.save(any(Product.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(inventoryRepository.save(any(Inventory.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         // Act
         inventoryService.createInventory(request);
 
         // Assert
-        verify(productRepository, times(1)).save(any(Product.class));
+        ArgumentCaptor<Product> productCaptor = ArgumentCaptor.forClass(Product.class);
+        verify(productRepository, times(1)).save(productCaptor.capture());
+
+        Product savedProduct = productCaptor.getValue();
+        assertEquals("Monitor Samsung", savedProduct.getName());
+        assertEquals("Monitor 27 pulgadas 4K", savedProduct.getDescription());
+        assertEquals("SAM-MON-001", savedProduct.getSku());
+        assertEquals(new BigDecimal("1200000.00"), savedProduct.getPrice());
     }
 
     @Test
@@ -272,18 +270,18 @@ class InventoryServiceImplTest {
         Almacen testAlmacen = new Almacen();
         when(almacenRepository.findById(1L)).thenReturn(Optional.of(testAlmacen));
         when(productRepository.save(any(Product.class))).thenReturn(new Product());
-        
-        when(inventoryRepository.save(any(Inventory.class))).thenAnswer(invocation -> {
-            Inventory inventoryArgument = invocation.getArgument(0);
-            assertEquals(75, inventoryArgument.getStock());
-            assertNotNull(inventoryArgument.getLastUpdated());
-            return inventoryArgument;
-        });
+
+        when(inventoryRepository.save(any(Inventory.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         // Act
         inventoryService.createInventory(request);
 
         // Assert
-        verify(inventoryRepository, times(1)).save(any(Inventory.class));
+        ArgumentCaptor<Inventory> inventoryCaptor = ArgumentCaptor.forClass(Inventory.class);
+        verify(inventoryRepository, times(1)).save(inventoryCaptor.capture());
+
+        Inventory savedInventory = inventoryCaptor.getValue();
+        assertEquals(75, savedInventory.getStock());
+        assertNotNull(savedInventory.getLastUpdated());
     }
 }
