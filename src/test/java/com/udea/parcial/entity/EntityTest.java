@@ -17,8 +17,8 @@ class EntityTest {
         
         assertEquals(p1, p1);
         assertEquals(p1, p2);
-        assertNotEquals(p1, null);
-        assertNotEquals(p1, "string");
+        assertNotEquals(null, p1);
+        assertNotEquals("string", p1);
         
         assertEquals(p1.hashCode(), p1.hashCode());
     }
@@ -31,7 +31,7 @@ class EntityTest {
         
         assertEquals(a1, a1);
         assertEquals(a1, a2);
-        assertNotEquals(a1, null);
+        assertNotEquals(null, a1);
         
         assertEquals(a1.hashCode(), a1.hashCode());
     }
@@ -43,23 +43,22 @@ class EntityTest {
         Product product = new Product("Test", "SKU", "Desc", new BigDecimal("100"));
         
         Inventory i1 = new Inventory(almacen, product, 10);
-        //Inventory i2 = new Inventory(almacen, product, 20);
         
         assertEquals(i1, i1);
-        assertNotEquals(i1, null);
+        assertNotEquals(null, i1);
+        assertNotEquals("string", i1);
         
         assertEquals(i1.hashCode(), i1.hashCode());
     }
 
     @Test
     @DisplayName("Inventory - setStock actualiza lastUpdated")
-    void testInventorySetStockUpdatesTimestamp() throws InterruptedException {
+    void testInventorySetStockUpdatesTimestamp() {
         Almacen almacen = new Almacen("Test", "City", "Address", "Phone");
         Product product = new Product("Test", "SKU", "Desc", new BigDecimal("100"));
         Inventory inventory = new Inventory(almacen, product, 10);
         
         var firstUpdate = inventory.getLastUpdated();
-        Thread.sleep(10);
         inventory.setStock(20);
         var secondUpdate = inventory.getLastUpdated();
         

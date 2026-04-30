@@ -57,6 +57,6 @@ public class TestUtils {
      * Genera un stock aleatorio entre min y max
      */
     public static int generateRandomStock(int min, int max) {
-        return min + (int)(Math.random() * ((max - min) + 1));
+        return min + new java.util.Random().nextInt((max - min) + 1);
     }
 }

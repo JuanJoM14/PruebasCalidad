@@ -160,9 +160,9 @@ class InventoryServiceImplTest {
         request.setPrice(new BigDecimal("350000.00"));
         request.setStock(25);
 
-        Almacen almacen = new Almacen();
-        almacen.setNombre("Almacén Norte");
-        almacen.setCiudad("Bogotá");
+        Almacen testAlmacen = new Almacen();
+        testAlmacen.setNombre("Almacén Norte");
+        testAlmacen.setCiudad("Bogotá");
 
         Product savedProduct = new Product();
         savedProduct.setName(request.getProductName());
@@ -170,9 +170,9 @@ class InventoryServiceImplTest {
         savedProduct.setSku(request.getSku());
         savedProduct.setPrice(request.getPrice());
 
-        Inventory savedInventory = new Inventory(almacen, savedProduct, request.getStock());
+        Inventory savedInventory = new Inventory(testAlmacen, savedProduct, request.getStock());
 
-        when(almacenRepository.findById(1L)).thenReturn(Optional.of(almacen));
+        when(almacenRepository.findById(1L)).thenReturn(Optional.of(testAlmacen));
         when(productRepository.save(any(Product.class))).thenReturn(savedProduct);
         when(inventoryRepository.save(any(Inventory.class))).thenReturn(savedInventory);
 
@@ -232,10 +232,10 @@ class InventoryServiceImplTest {
         request.setPrice(new BigDecimal("1200000.00"));
         request.setStock(15);
 
-        Almacen almacen = new Almacen();
-        almacen.setNombre("Almacén Test");
+        Almacen testAlmacen = new Almacen();
+        testAlmacen.setNombre("Almacén Test");
         
-        when(almacenRepository.findById(1L)).thenReturn(Optional.of(almacen));
+        when(almacenRepository.findById(1L)).thenReturn(Optional.of(testAlmacen));
         
         // Captura el producto que se pasa al save
         when(productRepository.save(any(Product.class))).thenAnswer(invocation -> {
@@ -269,8 +269,8 @@ class InventoryServiceImplTest {
         request.setPrice(new BigDecimal("50000.00"));
         request.setStock(75);
 
-        Almacen almacen = new Almacen();
-        when(almacenRepository.findById(1L)).thenReturn(Optional.of(almacen));
+        Almacen testAlmacen = new Almacen();
+        when(almacenRepository.findById(1L)).thenReturn(Optional.of(testAlmacen));
         when(productRepository.save(any(Product.class))).thenReturn(new Product());
         
         when(inventoryRepository.save(any(Inventory.class))).thenAnswer(invocation -> {
