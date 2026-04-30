@@ -11,15 +11,12 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.hateoas.EntityModel;
-import org.springframework.hateoas.Link;
-import org.springframework.hateoas.server.mvc.WebMvcLinkBuilder;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/inventory")
@@ -28,11 +25,14 @@ public class InventoryController {
 
     private final InventoryService inventoryService;
     private final ApiVersionValidator versionValidator;
+        private final InventoryResponseAssembler responseAssembler;
 
     public InventoryController(InventoryService inventoryService,
-                               ApiVersionValidator versionValidator) {
+                                                           ApiVersionValidator versionValidator,
+                                                           InventoryResponseAssembler responseAssembler) {
         this.inventoryService = inventoryService;
         this.versionValidator = versionValidator;
+                this.responseAssembler = responseAssembler;
     }
 
     @Operation(summary = "Consultar inventario por almacén",
@@ -58,8 +58,8 @@ public class InventoryController {
         List<EntityModel<InventoryResponse>> responseList = inventoryService
                 .getInventoryByAlmacen(almacenId)
                 .stream()
-                .map(dto -> toHateoasModel(dto, version, almacenId))
-                .collect(Collectors.toList());
+                .map(dto -> responseAssembler.toInventoryModel(dto, version, almacenId))
+                .toList();
 
         return ResponseEntity.ok(responseList);
     }
@@ -86,42 +86,8 @@ public class InventoryController {
         if (versionError.isPresent()) return versionError.get();
 
         InventoryResponse dto = inventoryService.createInventory(request);
-        EntityModel<InventoryResponse> model = addCreateLinks(dto, version, request);
+        EntityModel<InventoryResponse> model = responseAssembler.toCreatedInventoryModel(dto, version, request);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(model);
-    }
-
-    // ── helpers HATEOAS ────────────────────────────────────────────────────
-
-    private EntityModel<InventoryResponse> toHateoasModel(InventoryResponse dto,
-                                                           String version,
-                                                           Long almacenId) {
-        Link selfLink = WebMvcLinkBuilder
-                .linkTo(WebMvcLinkBuilder.methodOn(InventoryController.class)
-                        .getInventory(version, almacenId))
-                .withSelfRel();
-
-        Link almacenLink = WebMvcLinkBuilder
-                .linkTo(WebMvcLinkBuilder.methodOn(InventoryController.class)
-                        .getInventory(version, dto.getAlmacenId()))
-                .withRel("almacen");
-
-        return EntityModel.of(dto, selfLink, almacenLink);
-    }
-
-    private EntityModel<InventoryResponse> addCreateLinks(InventoryResponse dto,
-                                                           String version,
-                                                           InventoryRequest request) {
-        Link selfLink = WebMvcLinkBuilder
-                .linkTo(WebMvcLinkBuilder.methodOn(InventoryController.class)
-                        .createInventory(version, request))
-                .withSelfRel();
-
-        Link getAllLink = WebMvcLinkBuilder
-                .linkTo(WebMvcLinkBuilder.methodOn(InventoryController.class)
-                        .getInventory(version, dto.getAlmacenId()))
-                .withRel("inventario_por_almacen");
-
-        return EntityModel.of(dto, selfLink, getAllLink);
     }
 }

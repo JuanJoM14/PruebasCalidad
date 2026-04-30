@@ -9,20 +9,18 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Import;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
@@ -31,6 +29,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(InventoryController.class)
+@Import({ApiVersionValidator.class, InventoryResponseAssembler.class})
 class InventoryControllerTest {
 
     @Autowired
@@ -38,9 +37,6 @@ class InventoryControllerTest {
 
     @MockBean
     private InventoryService inventoryService;
-
-    @MockBean
-    private ApiVersionValidator versionValidator;
 
     private Almacen almacen;
     private Product product;
@@ -62,8 +58,6 @@ class InventoryControllerTest {
         inventoryResponse.setSku("SKU-001");
         inventoryResponse.setPrice(new BigDecimal("3000000"));
         inventoryResponse.setStock(50);
-
-        when(versionValidator.validate("v1")).thenReturn(Optional.empty());
     }
 
     @Test
@@ -89,9 +83,6 @@ class InventoryControllerTest {
     @Test
     @DisplayName("GET /inventory - Con versión incorrecta debe retornar 400")
     void testGetInventory_WithWrongVersion() throws Exception {
-        when(versionValidator.validate("v2"))
-            .thenReturn(Optional.of(ResponseEntity.badRequest().body("Unsupported API version")));
-
         mockMvc.perform(get("/inventory")
                 .header("X-API-Version", "v2")
                 .param("almacenId", "1"))
