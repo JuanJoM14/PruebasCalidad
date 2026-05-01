@@ -29,6 +29,10 @@ import com.udea.parcial.service.InventoryService;
 @DisplayName("Pruebas unitarias del controlador InventoryController")
 class InventoryControllerTest {
 
+    private static final String VERSION_OK = "v1";
+    private static final String VERSION_BAD = "v2";
+    private static final String VERSION_ERROR_MESSAGE = "Unsupported API version";
+
     @Mock
     private InventoryService inventoryService;
 
@@ -45,20 +49,17 @@ class InventoryControllerTest {
     @DisplayName("getInventory - Debe retornar 400 cuando la version no es v1")
     void testGetInventory_InvalidVersion() {
         // Arrange
-        String version = "v2";
+        String version = VERSION_BAD;
         Long almacenId = 1L;
-        ResponseEntity<String> errorResponse = ResponseEntity
-                .status(HttpStatus.BAD_REQUEST)
-                .body("Unsupported API version");
 
-        when(versionValidator.validate(version)).thenReturn(Optional.of(errorResponse));
+        when(versionValidator.validate(version))
+            .thenReturn(Optional.of(buildUnsupportedVersionResponse()));
 
         // Act
         ResponseEntity<?> response = controller.getInventory(version, almacenId);
 
         // Assert
-        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
-        assertEquals("Unsupported API version", response.getBody());
+        assertBadRequestUnsupportedVersion(response);
         verify(inventoryService, never()).getInventoryByAlmacen(any());
         verify(responseAssembler, never()).toInventoryModel(any(), any(), any());
     }
@@ -67,18 +68,11 @@ class InventoryControllerTest {
     @DisplayName("getInventory - Debe retornar inventario mapeado correctamente")
     void testGetInventory_Success() {
         // Arrange
-        String version = "v1";
+        String version = VERSION_OK;
         Long almacenId = 1L;
 
-        InventoryResponse dto1 = new InventoryResponse();
-        dto1.setInventoryId(100L);
-        dto1.setAlmacenId(1L);
-        dto1.setAlmacenNombre("Almacen Central");
-
-        InventoryResponse dto2 = new InventoryResponse();
-        dto2.setInventoryId(101L);
-        dto2.setAlmacenId(1L);
-        dto2.setAlmacenNombre("Almacen Central");
+        InventoryResponse dto1 = buildInventoryResponse(100L, 1L, "Almacen Central");
+        InventoryResponse dto2 = buildInventoryResponse(101L, 1L, "Almacen Central");
 
         when(versionValidator.validate(version)).thenReturn(Optional.empty());
         when(inventoryService.getInventoryByAlmacen(almacenId)).thenReturn(List.of(dto1, dto2));
@@ -90,10 +84,7 @@ class InventoryControllerTest {
 
         // Assert
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertNotNull(response.getBody());
-
-        @SuppressWarnings("unchecked")
-        List<EntityModel<InventoryResponse>> body = (List<EntityModel<InventoryResponse>>) response.getBody();
+        List<EntityModel<InventoryResponse>> body = getBodyAsInventoryList(response);
 
         assertEquals(2, body.size());
         assertEquals(dto1, body.get(0).getContent());
@@ -107,20 +98,17 @@ class InventoryControllerTest {
     @DisplayName("createInventory - Debe retornar 400 cuando la version no es v1")
     void testCreateInventory_InvalidVersion() {
         // Arrange
-        String version = "v2";
+        String version = VERSION_BAD;
         InventoryRequest request = new InventoryRequest();
-        ResponseEntity<String> errorResponse = ResponseEntity
-                .status(HttpStatus.BAD_REQUEST)
-                .body("Unsupported API version");
 
-        when(versionValidator.validate(version)).thenReturn(Optional.of(errorResponse));
+        when(versionValidator.validate(version))
+            .thenReturn(Optional.of(buildUnsupportedVersionResponse()));
 
         // Act
         ResponseEntity<?> response = controller.createInventory(version, request);
 
         // Assert
-        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
-        assertEquals("Unsupported API version", response.getBody());
+        assertBadRequestUnsupportedVersion(response);
         verify(inventoryService, never()).createInventory(any(InventoryRequest.class));
         verify(responseAssembler, never()).toCreatedInventoryModel(any(), any(), any());
     }
@@ -129,23 +117,9 @@ class InventoryControllerTest {
     @DisplayName("createInventory - Debe crear producto e inventario exitosamente")
     void testCreateInventory_Success() {
         // Arrange
-        String version = "v1";
-        InventoryRequest request = new InventoryRequest();
-        request.setAlmacenId(1L);
-        request.setProductName("Mouse");
-        request.setProductDescription("Mouse inalambrico");
-        request.setSku("MOU-001");
-        request.setStock(12);
-
-        InventoryResponse serviceDto = new InventoryResponse();
-        serviceDto.setInventoryId(20L);
-        serviceDto.setAlmacenId(1L);
-        serviceDto.setAlmacenNombre("Almacen Norte");
-        serviceDto.setProductId(5L);
-        serviceDto.setProductName("Mouse");
-        serviceDto.setProductDescription("Mouse inalambrico");
-        serviceDto.setSku("MOU-001");
-        serviceDto.setStock(12);
+        String version = VERSION_OK;
+        InventoryRequest request = buildInventoryRequest();
+        InventoryResponse serviceDto = buildCreatedInventoryResponse();
 
         when(versionValidator.validate(version)).thenReturn(Optional.empty());
         when(inventoryService.createInventory(request)).thenReturn(serviceDto);
@@ -157,10 +131,7 @@ class InventoryControllerTest {
 
         // Assert
         assertEquals(HttpStatus.CREATED, response.getStatusCode());
-        assertNotNull(response.getBody());
-
-        @SuppressWarnings("unchecked")
-        EntityModel<InventoryResponse> body = (EntityModel<InventoryResponse>) response.getBody();
+        EntityModel<InventoryResponse> body = getBodyAsInventoryModel(response);
         InventoryResponse dto = body.getContent();
 
         assertNotNull(dto);
@@ -175,5 +146,61 @@ class InventoryControllerTest {
 
         verify(inventoryService, times(1)).createInventory(request);
         verify(responseAssembler, times(1)).toCreatedInventoryModel(serviceDto, version, request);
+    }
+
+    private static ResponseEntity<String> buildUnsupportedVersionResponse() {
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(VERSION_ERROR_MESSAGE);
+    }
+
+    private static InventoryRequest buildInventoryRequest() {
+        InventoryRequest request = new InventoryRequest();
+        request.setAlmacenId(1L);
+        request.setProductName("Mouse");
+        request.setProductDescription("Mouse inalambrico");
+        request.setSku("MOU-001");
+        request.setStock(12);
+        return request;
+    }
+
+    private static InventoryResponse buildInventoryResponse(Long inventoryId,
+                                                            Long almacenId,
+                                                            String almacenNombre) {
+        InventoryResponse dto = new InventoryResponse();
+        dto.setInventoryId(inventoryId);
+        dto.setAlmacenId(almacenId);
+        dto.setAlmacenNombre(almacenNombre);
+        return dto;
+    }
+
+    private static InventoryResponse buildCreatedInventoryResponse() {
+        InventoryResponse dto = new InventoryResponse();
+        dto.setInventoryId(20L);
+        dto.setAlmacenId(1L);
+        dto.setAlmacenNombre("Almacen Norte");
+        dto.setProductId(5L);
+        dto.setProductName("Mouse");
+        dto.setProductDescription("Mouse inalambrico");
+        dto.setSku("MOU-001");
+        dto.setStock(12);
+        return dto;
+    }
+
+    private static void assertBadRequestUnsupportedVersion(ResponseEntity<?> response) {
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertEquals(VERSION_ERROR_MESSAGE, response.getBody());
+    }
+
+    @SuppressWarnings("unchecked")
+    private static List<EntityModel<InventoryResponse>> getBodyAsInventoryList(ResponseEntity<?> response) {
+        assertNotNull(response.getBody());
+        return (List<EntityModel<InventoryResponse>>) response.getBody();
+    }
+
+    @SuppressWarnings("unchecked")
+    private static EntityModel<InventoryResponse> getBodyAsInventoryModel(ResponseEntity<?> response) {
+        assertNotNull(response.getBody());
+        return (EntityModel<InventoryResponse>) response.getBody();
     }
 }
